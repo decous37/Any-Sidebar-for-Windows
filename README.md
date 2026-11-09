@@ -4,7 +4,15 @@
 
 沿用 [Mac 版](https://github.com/decous37/Any-Sidebar-for-Mac) 的界面：划选文字、手动截取代码或图表，把资料留在引用区，再直接问 AI。按阅读任务保存会话，不因切换文件换对话。
 
-当前是 **0.1.0 开发版**。初版代码已接入，正在集中构建和验证；测试与打包的实际结果以[验收记录](docs/validation-report.md)为准。暂未发布已验证的安装包，也未完成代码签名。
+当前是 **0.1.0 开发预览版**。已完成初版和集中测试，提供 x64、ARM64 下载包。Windows 托管环境中的 12 项桌面检查通过；ARM64 实际运行、多屏缩放和真实模型效果仍待验证，详见[验收记录](docs/validation-report.md)。
+
+## 下载与开始
+
+1. 在 [下载页](https://github.com/decous37/Any-Sidebar-for-Windows/releases/tag/v0.1.0)选择 `win-x64.zip`；使用 ARM Windows 的设备选择 `win-arm64.zip`。
+2. 完整解压后运行 `AnySidebarWindows.exe`。需要 [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)；包内已包含 .NET 运行时。
+3. 在设置中保存自己的 DeepSeek API Key，即可开始对话。自动划词需先确认采集说明，再开启。
+
+这是未签名的预览版，Windows 可能显示未知发布者提示。可用下载页的 `SHA256SUMS.txt` 核对文件；不需要关闭系统安全保护。可选运行包内 `Install.ps1`，添加开始菜单入口。
 
 ## 能做什么
 
