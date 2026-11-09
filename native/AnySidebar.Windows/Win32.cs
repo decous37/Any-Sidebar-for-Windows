@@ -10,6 +10,7 @@ internal static class Win32 {
  [DllImport("user32.dll")]internal static extern bool IsWindowVisible(IntPtr window);
  [DllImport("user32.dll")]internal static extern bool IsIconic(IntPtr window);
  [DllImport("user32.dll")]internal static extern bool GetWindowRect(IntPtr window,out Rect rect);
+ [DllImport("user32.dll")]internal static extern uint GetDpiForWindow(IntPtr window);
  [DllImport("user32.dll")]internal static extern bool GetCursorPos(out Point point);
  [DllImport("user32.dll")]internal static extern short GetAsyncKeyState(int key);
  [DllImport("user32.dll")]internal static extern short GetKeyState(int key);

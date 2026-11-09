@@ -2875,3 +2875,14 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+========================================================================
+Native Windows dependencies
+
+Microsoft.Web.WebView2 1.0.3650.58 — BSD-style license; see licenses/WebView2-LICENSE.txt and WebView2-NOTICE.txt.
+Microsoft.Data.Sqlite / Microsoft.Data.Sqlite.Core 10.0.14 — MIT; copyright Microsoft Corporation and contributors.
+SQLitePCLRaw 2.1.13 — Apache-2.0; see licenses/SQLitePCLRaw-Apache-2.0.txt.
+SQLite native library — public domain, https://sqlite.org/copyright.html.
+.NET runtime and Windows Desktop runtime — see licenses/dotnet-runtime-LICENSE.txt, dotnet-runtime-THIRD-PARTY-NOTICES.txt and dotnet-desktop-LICENSE.txt.
+
+The separately installed Evergreen WebView2 Runtime is distributed and updated by Microsoft under its own terms.

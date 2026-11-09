@@ -15,7 +15,7 @@ internal sealed class AppController:IAsyncDisposable {
   foregroundTimer=new DispatcherTimer{Interval=TimeSpan.FromMilliseconds(400)};foregroundTimer.Tick+=(_,_)=>{var window=Win32.GetForegroundWindow();if(window!=IntPtr.Zero&&!Win32.Own(window))lastExternal=window;};foregroundTimer.Start();
   Shell.Panel.PreviewKeyDown+=(_,e)=>{if(Hotkeys.RecordingOperation is not null){var key=e.Key==System.Windows.Input.Key.System?e.SystemKey:e.Key;e.Handled=Hotkeys.RecordKey(System.Windows.Input.KeyInterop.VirtualKeyFromKey(key));}};
  }
- internal async Task StartAsync(){var state=await Runtime.ReadStateAsync();Hotkeys.Restore(state.Preferences);Shell.SetCompanion(state.Preferences.CompanionVisible);await Bridge.InitializeAsync();await RefreshAsync();Shell.ShowPanel();}
+ internal async Task StartAsync(){var state=await Runtime.ReadStateAsync();Hotkeys.Restore(state.Preferences);Shell.SetCompanion(state.Preferences.CompanionVisible);Shell.ShowPanel();await Bridge.InitializeAsync();await RefreshAsync();Shell.ShowPanel();}
  internal void SetFault(AppFault value){fault=value;SystemChanged("permissions-changed");}
  void SystemChanged(string type){systemRevision++;Bridge.Notify(type);}
  async Task RefreshAsync(){if(quitting)return;var state=await Runtime.ReadStateAsync();selection.Configure(state.Preferences.AutoSelectionEnabled&&state.Preferences.DisclosureVersion=="v1");if(state.ActiveTaskId is {} id&&state.Drafts.TryGetValue(id,out var draft))Shell.Reference(draft.ExternalQuotes.Count+draft.Images.Count>0||draft.AssistantQuote is not null);}
