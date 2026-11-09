@@ -7,6 +7,7 @@
 本仓库会随开发分阶段更新。当前处于规格与平台适配阶段，尚无可运行的 Windows 安装包；不会把代码上传或模拟界面当作真实 Windows 验证。
 
 - [需求规格](docs/specs/windows-sidebar/spec.md)
+- [Windows 平台核对](docs/platform-notes.md)
 - [Mac 版](https://github.com/decous37/Any-Sidebar-for-Mac)
 - [Chrome 版](https://github.com/decous37/Any-Sidebar)
 
