@@ -27,7 +27,7 @@ internal sealed class Checks:Application {
  async Task RunChecks(){
   var output=Path.Combine(root,"artifacts/windows-native");Directory.CreateDirectory(output);var data=Path.Combine(Path.GetTempPath(),"anysidebar-windows-check-"+Guid.NewGuid());
   try{
-   System.Windows.Interop.RenderOptions.ProcessRenderMode=System.Windows.Interop.RenderMode.SoftwareOnly;
+   System.Windows.Media.RenderOptions.ProcessRenderMode=System.Windows.Interop.RenderMode.SoftwareOnly;
    controller=new AppController(data);await controller.StartAsync();var app=controller;
    await Check("真实WebView2页面与桥接启动",async()=>{await Wait(async()=>await app.Shell.Web.ExecuteScriptAsync("!!document.querySelector('[aria-label=\"收起浮窗\"]')")=="true","页面未加载");Expect(app.Shell.Panel.IsVisible,"侧栏未展开");});
    await Check("页面收起按钮真实调用原生隐藏",async()=>{await app.Shell.Web.ExecuteScriptAsync("document.querySelector('[aria-label=\"收起浮窗\"]').click()");await Wait(()=>Task.FromResult(!app.Shell.Panel.IsVisible),"页面未能收起原生窗口");app.Shell.ShowPanel();});
