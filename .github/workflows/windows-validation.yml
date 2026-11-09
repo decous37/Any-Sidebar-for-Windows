@@ -42,9 +42,22 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: windows-build-and-evidence
+          name: windows-evidence
           path: |
-            release/*.zip
             artifacts/windows-native/
             artifacts/windows/
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-x64-package
+          path: release/*-win-x64.zip
+          compression-level: 0
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-arm64-package
+          path: release/*-win-arm64.zip
+          compression-level: 0
           retention-days: 7
