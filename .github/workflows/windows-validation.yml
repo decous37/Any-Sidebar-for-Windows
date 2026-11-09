@@ -30,14 +30,15 @@ jobs:
       - name: Build complete app
         id: build
         run: npm run build
+      - name: Publish both architectures
+        id: publish
+        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        run: npm run publish:windows
       - name: Real Windows desktop checks
         timeout-minutes: 6
         run: dotnet run --project native/Windows.Checks/Windows.Checks.csproj -c Release -- "$pwd"
-      - name: Publish both architectures
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
-        run: npm run publish:windows
       - name: Audit and package
-        if: ${{ !cancelled() && steps.build.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.publish.outcome == 'success' }}
         run: npm run package
       - uses: actions/upload-artifact@v4
         if: always()

@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Automation;
 using System.Windows.Interop;
 using System.Windows.Media;
 using AnySidebar.Core;
@@ -62,17 +63,38 @@ internal sealed class Checks:Application {
     try{await Wait(async()=>{var bootstrap=JsonSerializer.SerializeToElement(await app.BootstrapAsync(),J.Options);return bootstrap.GetProperty("selectionStatus").GetString()=="excluded";},"未排除可编辑选区");var s=await app.Runtime.ReadStateAsync();Expect(s.Drafts[s.ActiveTaskId!].ExternalQuotes.All(q=>!q.Text.Contains("Editable private-input")),"可编辑输入进入了引用");}finally{editable.CloseMainWindow();if(!editable.WaitForExit(2000))editable.Kill(true);}
    });
    await Check("退出准备保存页面草稿",async()=>{app.Shell.ShowPanel();await app.Shell.Web.ExecuteScriptAsync("(()=>{const e=document.querySelector('textarea');const setter=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set;setter.call(e,'退出前的公开测试草稿');e.dispatchEvent(new Event('input',{bubbles:true}));})()");Expect(await app.PrepareQuitAsync(),"退出保存握手失败");var s=await app.Runtime.ReadStateAsync();Expect(s.Drafts[s.ActiveTaskId!].Prompt=="退出前的公开测试草稿","未保存最后输入");});
+   await controller.DisposeAsync();controller=null;
+   await Check("发布EXE启动、单实例和右键退出",PublishedApplication);
+
   }catch(Exception e){failures++;results.Add(new{name="启动/环境",status="failed",error=e.GetType().Name+": "+e.Message});Console.WriteLine(e.GetType().Name+": "+e.Message);}
   finally{try{if(fixture is not null&&!fixture.HasExited){fixture.CloseMainWindow();if(!fixture.WaitForExit(3000))fixture.Kill(true);}}catch{}try{if(controller is not null)await controller.DisposeAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));}catch(Exception e){failures++;results.Add(new{name="关闭释放",status="failed",error=e.Message});}File.WriteAllText(Path.Combine(output,"report.json"),JsonSerializer.Serialize(new{environment=Environment.OSVersion.ToString(),architecture=RuntimeInformation.ProcessArchitecture.ToString(),results,failures},new JsonSerializerOptions{WriteIndented=true}));try{Directory.Delete(data,true);}catch{}Shutdown();}
+ }
+ async Task PublishedApplication(){
+  var executable=Path.Combine(root,"build","publish","win-x64","AnySidebarWindows.exe");Expect(File.Exists(executable),"缺少发布的x64 EXE");
+  var dataRoot=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"AnySidebarForWindows");var ownsData=!Directory.Exists(dataRoot);
+  using var actual=Process.Start(new ProcessStartInfo(executable){WorkingDirectory=Path.GetDirectoryName(executable),UseShellExecute=false})??throw new Exception("发布EXE未启动");
+  try{
+   AutomationElement? main=null;
+   await Wait(()=>Task.Run(()=>{if(actual.HasExited)throw new Exception("发布EXE提前退出");main=AutomationElement.RootElement.FindFirst(TreeScope.Children,new AndCondition(new PropertyCondition(AutomationElement.ProcessIdProperty,actual.Id),new PropertyCondition(AutomationElement.NameProperty,"Any Sidebar")));return main?.FindFirst(TreeScope.Descendants,new PropertyCondition(AutomationElement.NameProperty,"收起浮窗"))is not null;}),"发布EXE未显示完整侧栏",20000);
+   using(var second=Process.Start(new ProcessStartInfo(executable){WorkingDirectory=Path.GetDirectoryName(executable),UseShellExecute=false})??throw new Exception("第二实例未启动")){await Wait(()=>Task.FromResult(second.HasExited),"第二实例未正常交还控制",6000);Expect(!actual.HasExited,"原实例被错误结束");}
+   AutomationElement? entry=null;
+   await Wait(()=>Task.Run(()=>{entry=AutomationElement.RootElement.FindFirst(TreeScope.Children,new AndCondition(new PropertyCondition(AutomationElement.ProcessIdProperty,actual.Id),new PropertyCondition(AutomationElement.NameProperty,"Any Sidebar 入口")));return entry is not null;}),"发布应用缺少桌面入口");
+   var rectangle=entry!.Current.BoundingRectangle;Native.SetCursorPos((int)(rectangle.Left+rectangle.Width/2),(int)(rectangle.Top+rectangle.Height/2));
+   var mouse=new[]{Native.Input.RightMouse(false),Native.Input.RightMouse(true)};Expect(Native.SendInput(2,mouse,Marshal.SizeOf<Native.Input>())==2,"右键未投递");
+   AutomationElement? quit=null;
+   await Wait(()=>Task.Run(()=>{var windows=AutomationElement.RootElement.FindAll(TreeScope.Children,new PropertyCondition(AutomationElement.ProcessIdProperty,actual.Id));foreach(AutomationElement window in windows){quit=window.FindFirst(TreeScope.Descendants,new AndCondition(new PropertyCondition(AutomationElement.NameProperty,"退出 Any Sidebar"),new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.MenuItem)));if(quit is not null)return true;}return false;}),"右键菜单缺少退出");
+   ((InvokePattern)quit!.GetCurrentPattern(InvokePattern.Pattern)).Invoke();await Wait(()=>Task.FromResult(actual.HasExited),"发布EXE未能正常保存并退出",10000);Expect(actual.ExitCode==0,"发布EXE异常退出");
+  }finally{if(!actual.HasExited)actual.Kill(true);if(ownsData)try{Directory.Delete(dataRoot,true);}catch{/* Only the disposable fixture-owned directory is eligible for cleanup. */}}
  }
  static T? Find<T>(DependencyObject root,Func<T,bool>? predicate=null)where T:DependencyObject{if(root is T value&&(predicate is null||predicate(value)))return value;foreach(var child in LogicalTreeHelper.GetChildren(root).OfType<DependencyObject>()){var match=Find(child,predicate);if(match is not null)return match;}return null;}
  static void Keys(params ushort[] keys){var inputs=keys.Select(k=>Native.Input.Keyboard(k,false)).Concat(keys.Reverse().Select(k=>Native.Input.Keyboard(k,true))).ToArray();var sent=Native.SendInput((uint)inputs.Length,inputs,Marshal.SizeOf<Native.Input>());if(sent!=inputs.Length)throw new Exception("系统输入未全部投递");}
  static class Native {
-  [StructLayout(LayoutKind.Sequential)]internal struct Input{public uint Type;public Union Data;public static Input Keyboard(ushort key,bool up)=>new(){Type=1,Data=new Union{Key=new KeyInput{Vk=key,Flags=up?2u:0u}}};}
+  [StructLayout(LayoutKind.Sequential)]internal struct Input{public uint Type;public Union Data;public static Input RightMouse(bool up)=>new(){Type=0,Data=new Union{Mouse=new MouseInput{Flags=up?0x10u:0x8u}}};public static Input Keyboard(ushort key,bool up)=>new(){Type=1,Data=new Union{Key=new KeyInput{Vk=key,Flags=up?2u:0u}}};}
   [StructLayout(LayoutKind.Explicit)]internal struct Union{[FieldOffset(0)]public KeyInput Key;[FieldOffset(0)]public MouseInput Mouse;}
   [StructLayout(LayoutKind.Sequential)]internal struct KeyInput{public ushort Vk,Scan;public uint Flags,Time;public IntPtr Extra;}
   [StructLayout(LayoutKind.Sequential)]internal struct MouseInput{public int X,Y;public uint Data,Flags,Time;public IntPtr Extra;}
   [DllImport("user32.dll",SetLastError=true)]internal static extern uint SendInput(uint count,Input[] inputs,int size);
+  [DllImport("user32.dll")]internal static extern bool SetCursorPos(int x,int y);
   [DllImport("user32.dll")]internal static extern bool SetForegroundWindow(IntPtr window);
  }
 }
