@@ -4,7 +4,7 @@ internal sealed class HotkeyService:IDisposable {
  readonly IntPtr handle;readonly HwndSource source;readonly Dictionary<string,Shortcut?> bindings=new(){{"capture",null},{"panel",null}};bool suspended;
  internal string CaptureState{get;private set;}="unbound";internal string PanelState{get;private set;}="unbound";
  internal Action<string>? Triggered;internal Action? Changed;internal string? RecordingOperation{get;private set;}internal string RecordingKind{get;private set;}="capture";internal Shortcut? Candidate{get;private set;}
- internal HotkeyService(Window window){handle=Win32.Handle(window);source=HwndSource.FromHwnd(handle);source.AddHook(Hook);ComponentDispatcher.ThreadPreprocessMessage+=Preprocess;}
+ internal HotkeyService(Window window){handle=Win32.Handle(window);source=HwndSource.FromHwnd(handle);source.AddHook(Hook);}
  static int Id(string kind)=>kind=="capture"?1:2;
  static uint Modifiers(Shortcut b)=>b.Modifiers.Aggregate(Win32.MOD_NOREPEAT,(flags,m)=>flags|(m switch{"alt"=>1u,"control"=>2u,"shift"=>4u,"windows"=>8u,_=>0u}));
  static bool Same(Shortcut? a,Shortcut? b)=>a is null?b is null:b is not null&&a.KeyCode==b.KeyCode&&a.Modifiers.Order().SequenceEqual(b.Modifiers.Order());
@@ -16,8 +16,7 @@ internal sealed class HotkeyService:IDisposable {
  internal void StartRecording(string kind,string operationId){CancelRecording();Suspended(true);RecordingKind=kind;RecordingOperation=operationId;Candidate=null;Changed?.Invoke();}
  internal void CancelRecording(){if(RecordingOperation is null)return;RecordingOperation=null;Candidate=null;Suspended(false);Changed?.Invoke();}
  void Suspended(bool value){suspended=value;foreach(var kind in bindings.Keys){Win32.UnregisterHotKey(handle,Id(kind));if(!value)Register(kind,bindings[kind]);}}
- internal bool RecordKey(int code){if(RecordingOperation is null)return false;if(code==0x1b){CancelRecording();return true;}if(code is 0x10 or 0x11 or 0x12 or 0x5b or 0x5c)return true;var modifiers=new List<string>();foreach(var(vk,name)in new[]{(0x11,"control"),(0x12,"alt"),(0x10,"shift"),(0x5b,"windows")})if((Win32.GetKeyState(vk)&0x8000)!=0||(name=="windows"&&(Win32.GetKeyState(0x5c)&0x8000)!=0))modifiers.Add(name);var binding=new Shortcut{KeyCode=code,Modifiers=modifiers};try{Validate(binding);Candidate=binding;RecordingOperation=null;Suspended(false);Changed?.Invoke();}catch(AppFault){/* Keep recording until a valid modified key or Esc. */}return true;}
- void Preprocess(ref MSG message,ref bool handled){if(RecordingOperation is not null&&message.message is 0x100 or 0x104&&Win32.Own(Win32.GetForegroundWindow()))handled=RecordKey(message.wParam.ToInt32());}
+ internal void AcceptCandidate(string operationId,Shortcut binding){if(RecordingOperation!=operationId)throw new AppFault("STALE_RECORDING","快捷键录入已结束，请重新录入。");if(!Win32.Own(Win32.GetForegroundWindow()))throw new AppFault("INVALID_ARGUMENT","请在侧栏中录入快捷键。");Validate(binding);Candidate=binding;RecordingOperation=null;Suspended(false);Changed?.Invoke();}
  IntPtr Hook(IntPtr hwnd,int message,IntPtr wparam,IntPtr lparam,ref bool handled){if(message==Win32.WM_HOTKEY&&!suspended){var id=wparam.ToInt32();if(id is 1 or 2){handled=true;Triggered?.Invoke(id==1?"capture":"panel");}}return IntPtr.Zero;}
- public void Dispose(){foreach(var kind in bindings.Keys)Win32.UnregisterHotKey(handle,Id(kind));source.RemoveHook(Hook);ComponentDispatcher.ThreadPreprocessMessage-=Preprocess;}
+ public void Dispose(){foreach(var kind in bindings.Keys)Win32.UnregisterHotKey(handle,Id(kind));source.RemoveHook(Hook);}
 }

@@ -22,6 +22,11 @@ internal static class Win32 {
  [DllImport("dwmapi.dll")]static extern int DwmGetWindowAttribute(IntPtr window,int attribute,out Rect rect,int size);
  internal delegate bool EnumWindow(IntPtr window,IntPtr param);
  [DllImport("user32.dll")]internal static extern bool EnumWindows(EnumWindow callback,IntPtr param);
+ [StructLayout(LayoutKind.Sequential)]struct Margins {public int Left,Right,Top,Bottom;}
+ [DllImport("dwmapi.dll")]static extern int DwmSetWindowAttribute(IntPtr window,int attribute,ref int value,int size);
+ [DllImport("dwmapi.dll")]static extern int DwmExtendFrameIntoClientArea(IntPtr window,ref Margins margins);
+ internal static bool Backdrop(Window window){var value=3;var handle=Handle(window);if(DwmSetWindowAttribute(handle,38,ref value,4)!=0)return false;var margins=new Margins{Left=-1,Right=-1,Top=-1,Bottom=-1};return DwmExtendFrameIntoClientArea(handle,ref margins)==0;}
+ internal static void DarkTitle(Window window,bool dark){var value=dark?1:0;DwmSetWindowAttribute(Handle(window),20,ref value,4);}
  internal static string Title(IntPtr window){var text=new StringBuilder(1024);GetWindowText(window,text,text.Capacity);return text.ToString();}
  internal static bool Own(IntPtr window){GetWindowThreadProcessId(window,out var id);return id==Environment.ProcessId;}
  internal static Rect Bounds(IntPtr window){if(DwmGetWindowAttribute(window,9,out var rect,Marshal.SizeOf<Rect>())==0&&rect.Width>0&&rect.Height>0)return rect;GetWindowRect(window,out rect);return rect;}

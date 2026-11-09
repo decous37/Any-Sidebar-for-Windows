@@ -190,6 +190,13 @@
         "success": "boolean"
       },
       "optional": {}
+    },
+    "recordShortcut": {
+      "required": {
+        "recordingOperationId": "id",
+        "binding": "object"
+      },
+      "optional": {}
     }
   }
 }
