@@ -24,7 +24,7 @@ public sealed class DeepSeekTransport: ITransport,IDisposable {
    while(true){
     string? line;using var idle=CancellationTokenSource.CreateLinkedTokenSource(total.Token);idle.CancelAfter(TimeSpan.FromSeconds(120));
     try{line=await reader.ReadLineAsync(idle.Token);}catch(OperationCanceledException)when(!cancel.IsCancellationRequested){throw new AppFault("NETWORK_TIMEOUT","等待回答超时，已接收内容保留。",true);}catch(DecoderFallbackException){throw new AppFault("INVALID_RESPONSE","服务返回了无法解析的文字编码。",true);}
-    if(line is null){if(data.Length>0){foreach(var delta in SseFrame(data.ToString(),out var end)){finished|=delta.FinishReason is not null;yield return delta;}done|=end;}break;}
+    if(line is null){if(data.Length>0){var remaining=SseFrame(data.ToString(),out var ended);foreach(var delta in remaining){finished|=delta.FinishReason is not null;yield return delta;}done|=ended;}break;}
     if(line.Length==0){if(data.Length==0)continue;var frame=data.ToString();data.Clear();var deltas=SseFrame(frame,out var end);if(end){done=true;break;}foreach(var delta in deltas){finished|=delta.FinishReason is not null;yield return delta;}continue;}
     if(line.StartsWith(':'))continue;if(line.StartsWith("data:",StringComparison.Ordinal)){var value=line[5..];if(value.StartsWith(' '))value=value[1..];if(data.Length>0)data.Append('\n');data.Append(value);if(data.Length>2*1024*1024)throw new AppFault("INVALID_RESPONSE","服务事件过大。",true);}
    }

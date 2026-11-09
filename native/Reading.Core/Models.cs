@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace AnySidebar.Core;
 
 public static class J {
- public static readonly JsonSerializerOptions Options=new(){PropertyNamingPolicy=JsonNamingPolicy.CamelCase,DefaultIgnoreCondition=JsonIgnoreCondition.WhenWritingNull,PropertyNameCaseInsensitive=false};
+ public static readonly JsonSerializerOptions Options=new(){PropertyNamingPolicy=JsonNamingPolicy.CamelCase,DefaultIgnoreCondition=JsonIgnoreCondition.Never,PropertyNameCaseInsensitive=false};
  public static T Clone<T>(T value)=>JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(value,Options),Options)!;
  public static string Id()=>Guid.NewGuid().ToString("D");
  public static bool IsId(string? value)=>Guid.TryParseExact(value,"D",out _);

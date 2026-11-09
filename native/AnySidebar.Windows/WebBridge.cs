@@ -26,7 +26,6 @@ internal sealed class WebBridge {
    if(command=="bootstrap"){epoch=currentEpoch;ready=true;}else if(currentEpoch!=epoch)throw new AppFault("STALE_VIEW","界面已更新，请重新打开。");
    var data=await app.ExecuteAsync(command,request.GetProperty("args"),request.GetProperty("operationId").GetString()!);web.PostWebMessageAsJson(JsonSerializer.Serialize(new{messageId,ok=true,data},J.Options));
   }catch(Exception error){var fault=error as AppFault??new AppFault("INVALID_ARGUMENT","操作未完成，请重试。",true);if(messageId is not null)try{web.PostWebMessageAsJson(JsonSerializer.Serialize(new{messageId,ok=false,error=fault.View()},J.Options));}catch{/* The document may already have closed. */}}};
-  app.Shell.Web.CoreWebView2Controller.AcceleratorKeyPressed+=(_,e)=>{if(e.KeyEventKind is CoreWebView2KeyEventKind.KeyDown or CoreWebView2KeyEventKind.SystemKeyDown)e.Handled=app.Hotkeys.RecordKey((int)e.VirtualKey);};
   web.ProcessFailed+=(_,_)=>{ready=false;epoch=null;app.SetFault(new("WEBVIEW_CRASHED","对话界面已中断，已保存内容保留。请从托盘重新打开。",true));};
   app.Shell.Web.Source=new Uri(Origin+"/index.html");
  }
