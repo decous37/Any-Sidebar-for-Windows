@@ -14,7 +14,7 @@ internal sealed class SelectionService:IDisposable {
   if(sourceWindow!=window||routeEpoch!=route.Epoch||taskId!=route.TaskId){sourceWindow=window;routeEpoch=route.Epoch;taskId=route.TaskId;lease=J.Id();token=J.Id();quoteId=null;lastText=null;sourceSequence=0;}
   Win32.GetWindowThreadProcessId(window,out var pid);var element=AutomationElement.FocusedElement;var watch=Stopwatch.StartNew();TextPattern? pattern=null;
   for(var depth=0;element is not null&&depth<8&&watch.ElapsedMilliseconds<250;depth++,element=TreeWalker.ControlViewWalker.GetParent(element)){
-   var current=element.Current;if(current.ProcessId!=(int)pid||current.IsPassword||current.ControlType==ControlType.Edit){SetStatus("excluded");return;}
+   var current=element.Current;if(current.ProcessId!=(int)pid||current.IsPassword||(current.ControlType==ControlType.Edit&&!(element.TryGetCurrentPattern(ValuePattern.Pattern,out var editable)&&((ValuePattern)editable).Current.IsReadOnly))){SetStatus("excluded");return;}
    if(element.TryGetCurrentPattern(TextPattern.Pattern,out var raw)){
     var candidate=(TextPattern)raw;var readOnly=candidate.DocumentRange.GetAttributeValue(TextPattern.IsReadOnlyAttribute);
     if(readOnly is not true&&(current.ControlType!=ControlType.Document||element.TryGetCurrentPattern(ValuePattern.Pattern,out _))){SetStatus("excluded");return;}

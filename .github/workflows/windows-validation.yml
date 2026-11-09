@@ -1,0 +1,47 @@
+name: Windows concentrated validation
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate-and-package:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_GENERATE_ASPNET_CERTIFICATE: 'false'
+      DOTNET_NOLOGO: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: npm ci
+      - run: npx playwright install chromium
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test:web
+      - run: npm run test:native
+      - run: npm run test:e2e
+      - run: npm run build
+      - name: Real Windows desktop checks
+        run: dotnet run --project native/Windows.Checks/Windows.Checks.csproj -c Release -- "$pwd"
+      - name: Publish both architectures
+        if: ${{ !cancelled() }}
+        run: npm run publish:windows
+      - name: Audit and package
+        if: ${{ !cancelled() }}
+        run: npm run package
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-build-and-evidence
+          path: |
+            release/*.zip
+            artifacts/windows-native/
+            artifacts/windows/
+          retention-days: 7
