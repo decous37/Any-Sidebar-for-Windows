@@ -28,7 +28,7 @@
 | T22 | Windows/CredentialVault.cs | T6 | 当前用户凭据读写删，未知状态和Key校验 | 已实现；验证范围见验收报告 |
 | T23 | Windows项目/Win32.cs | T6 | WPF/WebView2/托盘依赖、manifest、DPI及原生声明 | 已实现；验证范围见验收报告 |
 | T24 | Windows/HotkeyService.cs | T23 | 两组注册、暂停、录入、候选冲突与回滚 | 已实现；验证范围见验收报告 |
-| T25 | Windows/SelectionService.cs | T16,T23 | 后台UIA、只读/密码排除、鼠标释放稳定确认 | 已实现；验证范围见验收报告 |
+| T25 | Windows/SelectionService.cs | T16,T23 | 后台UIA、文档选区/普通输入及密码排除、鼠标释放稳定确认 | 已实现；验证范围见验收报告 |
 | T26 | Windows/CaptureService.cs | T12,T23 | 虚拟桌面区域覆盖层、Esc/取消及物理坐标 | 已实现；验证范围见验收报告 |
 | T27 | Windows/CaptureService.cs窗口 | T26 | 窗口选择、排除自身、来源与原任务固定 | 已实现；验证范围见验收报告 |
 | T28 | Windows/DesktopShell.cs | T23 | 入口拖动、面板靠近/收起、托盘和右键菜单 | 已实现；验证范围见验收报告 |
@@ -53,3 +53,12 @@
 执行顺序：T1→T2–T12→T13–T22→T23–T35→T36–T45；依赖指明的前置必须完成。开发期间分阶段上传，不提前运行功能测试；任务实现和验收通过分开记录。
 
 集中验证依据：[最终 Windows 执行](https://github.com/decous37/Any-Sidebar-for-Windows/actions/runs/42636135929)与[验收报告](../../validation-report.md)。实现完成不等于全部验收通过；ARM64运行、多屏、真实模型及未覆盖组合保持未验证。
+
+## 0.1.1 修复任务
+
+| 任务 | 文件 | 依赖 | 实现与完成条件 | 状态 |
+| --- | --- | --- | --- | --- |
+| T46 | Models/Runtime、WebBridge、protocol、index.html | T45 | 独立图片来源、CSP和受控路径一致；保留旧数据 | 已实现，待系统验证 |
+| T47 | Win32、SelectionService | T45 | 记事本文档面板可读，密码及普通输入仍排除 | 已实现，待系统验证 |
+| T48 | Windows.Checks、protocol测试 | T46,T47 | 真正解码缩略图/原图，系统记事本选文入上下文 | 已实现，待集中执行 |
+| T49 | 构建、包、文档 | T48 | 0.1.1 两架构包、实际验证记录、仓库与下载更新 | 待执行 |

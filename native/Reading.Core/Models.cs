@@ -33,6 +33,7 @@ public sealed class Draft {
 public sealed class ReadingTask {
  public string Id{get;set;}=J.Id();public string Title{get;set;}="阅读任务";public int Revision{get;set;}public int NextTurnOrder{get;set;}public string? ActiveOperationId{get;set;}public string? ActiveRequestId{get;set;}public long CreatedAt{get;set;}=J.Now();public long UpdatedAt{get;set;}=J.Now();
 }
+public static class ImageResources {public const string Origin="https://anysidebar-assets.local";}
 public sealed class ImageAsset {
  public string Id{get;set;}=J.Id();public SourceInfo Source{get;set;}=new();public string MediaType{get;set;}="image/png";public int Width{get;set;}public int Height{get;set;}public long ByteLength{get;set;}public string Sha256{get;set;}="";public string StorageKey{get;set;}="";public string? ThumbnailKey{get;set;}public string State{get;set;}="ready";public long CreatedAt{get;set;}=J.Now();
 }

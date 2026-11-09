@@ -7,6 +7,7 @@ internal static class Win32 {
  [DllImport("user32.dll")]internal static extern IntPtr GetForegroundWindow();
  [DllImport("user32.dll")]internal static extern uint GetWindowThreadProcessId(IntPtr window,out uint process);
  [DllImport("user32.dll",CharSet=CharSet.Unicode)]static extern int GetWindowText(IntPtr window,StringBuilder text,int count);
+ [DllImport("user32.dll",CharSet=CharSet.Unicode)]static extern int GetClassName(IntPtr window,StringBuilder text,int count);
  [DllImport("user32.dll")]internal static extern bool IsWindowVisible(IntPtr window);
  [DllImport("user32.dll")]internal static extern bool IsIconic(IntPtr window);
  [DllImport("user32.dll")]internal static extern bool GetWindowRect(IntPtr window,out Rect rect);
@@ -28,6 +29,13 @@ internal static class Win32 {
  internal static bool Backdrop(Window window){var value=3;var handle=Handle(window);if(DwmSetWindowAttribute(handle,38,ref value,4)!=0)return false;var margins=new Margins{Left=-1,Right=-1,Top=-1,Bottom=-1};return DwmExtendFrameIntoClientArea(handle,ref margins)==0;}
  internal static void DarkTitle(Window window,bool dark){var value=dark?1:0;DwmSetWindowAttribute(Handle(window),20,ref value,4);}
  internal static string Title(IntPtr window){var text=new StringBuilder(1024);GetWindowText(window,text,text.Capacity);return text.ToString();}
+ internal static bool IsDocumentEditor(IntPtr window,string elementClass){
+  // Only the document surface of the system text editor is allowed to be editable.
+  // Find dialogs, toolbars, web forms and unrelated Edit controls remain excluded.
+  if(!new[]{"Edit","RichEditD2DPT","RichEditD2D","RICHEDIT50W","RichEdit20W"}.Contains(elementClass,StringComparer.OrdinalIgnoreCase))return false;
+  var windowClass=new StringBuilder(256);GetClassName(window,windowClass,windowClass.Capacity);if(!string.Equals(windowClass.ToString(),"Notepad",StringComparison.OrdinalIgnoreCase))return false;
+  GetWindowThreadProcessId(window,out var pid);try{using var process=Process.GetProcessById((int)pid);return string.Equals(process.ProcessName,"notepad",StringComparison.OrdinalIgnoreCase);}catch{return false;}
+ }
  internal static bool Own(IntPtr window){GetWindowThreadProcessId(window,out var id);return id==Environment.ProcessId;}
  internal static Rect Bounds(IntPtr window){if(DwmGetWindowAttribute(window,9,out var rect,Marshal.SizeOf<Rect>())==0&&rect.Width>0&&rect.Height>0)return rect;GetWindowRect(window,out rect);return rect;}
  internal static SourceInfo Source(IntPtr window,string kind){GetWindowThreadProcessId(window,out var pid);string? name=null;try{using var process=Process.GetProcessById((int)pid);name=process.ProcessName;}catch{/* Unknown source metadata is allowed. */}var title=Title(window);return new(){Kind=kind,AppBundleId=name,AppName=name,DocumentTitle=string.IsNullOrWhiteSpace(title)?null:title,DocumentIdentity=$"{pid}:{window.ToInt64()}:{title}"};}

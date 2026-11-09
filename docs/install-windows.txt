@@ -1,4 +1,4 @@
-Any Sidebar for Windows 0.1.0
+Any Sidebar for Windows 0.1.1
 
 此为未代码签名的开发版，真实验证范围请查看 GitHub 文档。
 

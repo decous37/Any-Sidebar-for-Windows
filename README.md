@@ -4,11 +4,11 @@
 
 沿用 [Mac 版](https://github.com/decous37/Any-Sidebar-for-Mac) 的界面：划选文字、手动截取代码或图表，把资料留在引用区，再直接问 AI。按阅读任务保存会话，不因切换文件换对话。
 
-当前是 **0.1.0 开发预览版**。已完成初版和集中测试，提供 x64、ARM64 下载包。Windows 托管环境中的 12 项桌面检查通过；ARM64 实际运行、多屏缩放和真实模型效果仍待验证，详见[验收记录](docs/validation-report.md)。
+当前是 **0.1.1 开发预览版**。已完成初版和集中测试，提供 x64、ARM64 下载包。本次修复缩略图与记事本选文，结果见[0.1.1 验证记录](docs/validation-0.1.1.md)；ARM64 实际运行、多屏缩放和真实模型效果仍待验证，详见[验收记录](docs/validation-report.md)。
 
 ## 下载与开始
 
-1. 在 [下载页](https://github.com/decous37/Any-Sidebar-for-Windows/releases/tag/v0.1.0)选择 `win-x64.zip`；使用 ARM Windows 的设备选择 `win-arm64.zip`。
+1. 在 [下载页](https://github.com/decous37/Any-Sidebar-for-Windows/releases/tag/v0.1.1)选择 `win-x64.zip`；使用 ARM Windows 的设备选择 `win-arm64.zip`。
 2. 完整解压后运行 `AnySidebarWindows.exe`。需要 [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/)；包内已包含 .NET 运行时。
 3. 在设置中保存自己的 DeepSeek API Key，即可开始对话。自动划词需先确认采集说明，再开启。
 
@@ -34,7 +34,7 @@
 
 两组均可录入修改或清除。与其他软件冲突时会提示，保留原组合。
 
-划词依赖阅读软件提供选区，并非每个 PDF 阅读器或编辑器都支持。密码和可编辑输入不采集；受保护、高权限或安全桌面窗口可能无法读取，应用不会要求常驻管理员权限。
+划词依赖阅读软件提供选区，并非每个 PDF 阅读器或编辑器都支持。支持记事本文档选区；密码和普通表单输入不采集；受保护、高权限或安全桌面窗口可能无法读取，应用不会要求常驻管理员权限。
 
 ## 从源码构建
 

@@ -15,7 +15,8 @@ internal sealed class WebBridge {
   web.AddWebResourceRequestedFilter("*",CoreWebView2WebResourceContext.All);
   web.WebResourceRequested+=async(_,e)=>{
    var uri=e.Request.Uri;
-   if(uri.StartsWith(Origin+"/asset/",StringComparison.Ordinal)){
+   // Mapped hosts bypass WebResourceRequested. Dynamic images use a separate, unmapped origin.
+   if(uri.StartsWith(ImageResources.Origin+"/asset/",StringComparison.Ordinal)){
     var deferral=e.GetDeferral();try{var parts=new Uri(uri).AbsolutePath.Split('/',StringSplitOptions.RemoveEmptyEntries);if(parts.Length!=3||!J.IsId(parts[1])||parts[2] is not("preview" or "thumbnail"))throw new AppFault("IMAGE_MISSING","截图不可用。");var asset=await app.Runtime.GetAssetAsync(parts[1]);var bytes=await Task.Run(()=>app.Files.Read(asset,parts[2]=="thumbnail"));e.Response=environment.CreateWebResourceResponse(new MemoryStream(bytes),200,"OK","Content-Type: image/png\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff");}catch{e.Response=environment.CreateWebResourceResponse(new MemoryStream(),404,"Not Found","Cache-Control: no-store");}finally{deferral.Complete();}
    }else if(!uri.StartsWith(Origin+"/",StringComparison.Ordinal))e.Response=environment.CreateWebResourceResponse(new MemoryStream(),403,"Forbidden","Content-Type: text/plain");
   };

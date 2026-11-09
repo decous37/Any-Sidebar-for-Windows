@@ -17,7 +17,7 @@ internal sealed class SelectionService:IDisposable {
    var current=element.Current;if(current.ProcessId!=(int)pid||current.IsPassword){SetStatus("excluded");return;}
    if(element.TryGetCurrentPattern(TextPattern.Pattern,out var raw)){
     var candidate=(TextPattern)raw;var readOnly=candidate.DocumentRange.GetAttributeValue(TextPattern.IsReadOnlyAttribute);
-    if(readOnly is false||(element.TryGetCurrentPattern(ValuePattern.Pattern,out var valuePattern)&&!((ValuePattern)valuePattern).Current.IsReadOnly)||(readOnly is not true&&current.ControlType!=ControlType.Document)){SetStatus("excluded");return;}
+    if(!Win32.IsDocumentEditor(window,current.ClassName)&&(readOnly is false||(element.TryGetCurrentPattern(ValuePattern.Pattern,out var valuePattern)&&!((ValuePattern)valuePattern).Current.IsReadOnly)||(readOnly is not true&&current.ControlType!=ControlType.Document))){SetStatus("excluded");return;}
     pattern=candidate;break;
    }
    if(current.ControlType==ControlType.Edit){SetStatus("excluded");return;}

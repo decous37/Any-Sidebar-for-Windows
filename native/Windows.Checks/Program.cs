@@ -58,7 +58,25 @@ internal sealed class Checks:Application {
     var button=Find<Button>(chooser,b=>b.Content?.ToString()=="截取窗口")??throw new Exception("缺少截取按钮");button.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
     await Wait(async()=>{var s=await app.Runtime.ReadStateAsync();return s.Drafts[task].Images.Count==1;},"窗口截图未加入草稿");var state=await app.Runtime.ReadStateAsync();var image=state.Assets[state.Drafts[task].Images.Single().ImageId];var png=app.Files.Read(image);Expect(image.Width>50&&image.Height>50&&png.Length>100,"截图尺寸或PNG无效");File.WriteAllBytes(Path.Combine(output,"public-fixture-capture.png"),png);Expect(app.Shell.Panel.IsVisible,"完成截图后侧栏未展开");
    });
-   await Check("可编辑阅读控件不能被自动采集",async()=>{
+   await Check("真实WebView2缩略图与原图加载",async()=>{
+    app.Shell.ShowPanel();
+    await Wait(async()=>await app.Shell.Web.ExecuteScriptAsync("(()=>{const i=document.querySelector('.screenshot-strip img');return !!i&&i.complete&&i.naturalWidth>0})()")=="true","截图缩略图未在实际页面解码");
+    using(var screenshot=File.Create(Path.Combine(output,"thumbnail-loaded-sidebar.png")))await app.Shell.Web.CoreWebView2.CapturePreviewAsync(Microsoft.Web.WebView2.Core.CoreWebView2CapturePreviewImageFormat.Png,screenshot);
+    await app.Shell.Web.ExecuteScriptAsync("document.querySelector('.screenshot-open').click()");
+    await Wait(async()=>await app.Shell.Web.ExecuteScriptAsync("(()=>{const i=document.querySelector('.image-preview');return !!i&&i.complete&&i.naturalWidth>0})()")=="true","截图原图预览未解码");
+    await app.Shell.Web.ExecuteScriptAsync("document.querySelector('.image-preview').closest('dialog').querySelector('.solid-button').click()");
+   });
+   await Check("系统记事本文档选文自动进入上下文",async()=>{
+    var path=Path.Combine(data,"anysidebar-public-note.txt");File.WriteAllText(path,"Any Sidebar public Notepad fixture. Selected document text belongs in context.");
+    using var note=Process.Start(new ProcessStartInfo("notepad.exe",path){UseShellExecute=true})??throw new Exception("系统记事本未启动");IntPtr noteWindow=IntPtr.Zero;
+    try{
+     await Wait(()=>{Win32.EnumWindows((h,_)=>{if(Win32.IsWindowVisible(h)&&Win32.Title(h).Contains("anysidebar-public-note",StringComparison.OrdinalIgnoreCase))noteWindow=h;return true;},IntPtr.Zero);return Task.FromResult(noteWindow!=IntPtr.Zero);},"未找到公开测试文档窗口");
+     Win32.SetForegroundWindow(noteWindow);
+     await Wait(()=>Task.Run(()=>{var root=AutomationElement.FromHandle(noteWindow);var document=root.FindFirst(TreeScope.Descendants,new PropertyCondition(AutomationElement.IsTextPatternAvailableProperty,true));if(document is null)return false;var pattern=(TextPattern)document.GetCurrentPattern(TextPattern.Pattern);var range=pattern.DocumentRange.FindText("Selected document text belongs in context.",false,false);if(range is null)return false;if(document.Current.IsKeyboardFocusable)document.SetFocus();range.Select();return true;}),"记事本未提供文档选区");
+     await Wait(async()=>{var state=await app.Runtime.ReadStateAsync();return state.Drafts[state.ActiveTaskId!].ExternalQuotes.Any(q=>q.Text=="Selected document text belongs in context."&&q.Source.AppName=="notepad");},"可编辑记事本文档选文未加入上下文");
+    }finally{if(noteWindow!=IntPtr.Zero)Native.PostMessage(noteWindow,0x10,IntPtr.Zero,IntPtr.Zero);}
+   });
+   await Check("普通可编辑输入控件不能被自动采集",async()=>{
     using var editable=Process.Start(new ProcessStartInfo(Environment.ProcessPath!,"\""+root+"\" --fixture --editable"){UseShellExecute=false})??throw new Exception("编辑样例进程未启动");
     try{await Wait(async()=>{var bootstrap=JsonSerializer.SerializeToElement(await app.BootstrapAsync(),J.Options);return bootstrap.GetProperty("selectionStatus").GetString()=="excluded";},"未排除可编辑选区");var s=await app.Runtime.ReadStateAsync();Expect(s.Drafts[s.ActiveTaskId!].ExternalQuotes.All(q=>!q.Text.Contains("Editable private-input")),"可编辑输入进入了引用");}finally{editable.CloseMainWindow();if(!editable.WaitForExit(2000))editable.Kill(true);}
    });
@@ -96,5 +114,6 @@ internal sealed class Checks:Application {
   [DllImport("user32.dll",SetLastError=true)]internal static extern uint SendInput(uint count,Input[] inputs,int size);
   [DllImport("user32.dll")]internal static extern bool SetCursorPos(int x,int y);
   [DllImport("user32.dll")]internal static extern bool SetForegroundWindow(IntPtr window);
+  [DllImport("user32.dll")]internal static extern bool PostMessage(IntPtr window,uint message,IntPtr wparam,IntPtr lparam);
  }
 }
