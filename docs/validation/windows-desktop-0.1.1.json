@@ -1,0 +1,65 @@
+{
+  "run": "https://github.com/decous37/Any-Sidebar-for-Windows/actions/runs/42644837239",
+  "commit": "79cb45dafae50cea524e791ee66bdc1abda06f58",
+  "environment": "Microsoft Windows NT 10.0.26100.0",
+  "architecture": "X64",
+  "results": [
+    {
+      "name": "真实WebView2页面与桥接启动",
+      "status": "passed"
+    },
+    {
+      "name": "页面收起按钮真实调用原生隐藏",
+      "status": "passed"
+    },
+    {
+      "name": "托盘及桌面入口可恢复",
+      "status": "passed"
+    },
+    {
+      "name": "默认全局快捷键实际注册与触发",
+      "status": "passed"
+    },
+    {
+      "name": "快捷键录入捕获来自WebView2的按键",
+      "status": "passed"
+    },
+    {
+      "name": "系统凭据读写清除不落入页面",
+      "status": "passed"
+    },
+    {
+      "name": "独立阅读进程划词自动加入最新引用",
+      "status": "passed"
+    },
+    {
+      "name": "区域读屏二次热键取消无附件",
+      "status": "passed"
+    },
+    {
+      "name": "窗口截图保存真实PNG及原会话归属",
+      "status": "passed"
+    },
+    {
+      "name": "真实WebView2缩略图与原图加载",
+      "status": "passed"
+    },
+    {
+      "name": "系统记事本文档选文自动进入上下文",
+      "status": "passed"
+    },
+    {
+      "name": "普通可编辑输入控件不能被自动采集",
+      "status": "passed"
+    },
+    {
+      "name": "退出准备保存页面草稿",
+      "status": "passed"
+    },
+    {
+      "name": "发布EXE启动、单实例和右键退出",
+      "status": "passed"
+    }
+  ],
+  "failures": 0
+}
