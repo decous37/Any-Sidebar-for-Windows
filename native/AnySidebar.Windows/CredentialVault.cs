@@ -1,0 +1,12 @@
+namespace AnySidebar.Windows;
+internal sealed class CredentialVault:ICredentialVault {
+ const string Target="com.decous.anysidebar.windows.deepseek";const uint Generic=1,LocalMachine=2;
+ [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)]struct Credential {public uint Flags,Type;public string TargetName;public string? Comment;public System.Runtime.InteropServices.ComTypes.FILETIME LastWritten;public uint CredentialBlobSize;public IntPtr CredentialBlob;public uint Persist,AttributeCount;public IntPtr Attributes;public string? TargetAlias;public string? UserName;}
+ [DllImport("advapi32.dll",EntryPoint="CredReadW",CharSet=CharSet.Unicode,SetLastError=true)]static extern bool CredRead(string target,uint type,uint flags,out IntPtr credential);
+ [DllImport("advapi32.dll",EntryPoint="CredWriteW",CharSet=CharSet.Unicode,SetLastError=true)]static extern bool CredWrite(ref Credential credential,uint flags);
+ [DllImport("advapi32.dll",EntryPoint="CredDeleteW",CharSet=CharSet.Unicode,SetLastError=true)]static extern bool CredDelete(string target,uint type,uint flags);
+ [DllImport("advapi32.dll")]static extern void CredFree(IntPtr pointer);
+ public string? Read(){if(!CredRead(Target,Generic,0,out var pointer)){if(Marshal.GetLastWin32Error()==1168)return null;throw new AppFault("CREDENTIAL_UNAVAILABLE","无法读取 Windows 凭据，请检查当前用户的凭据管理器后重试。",true);}try{var item=Marshal.PtrToStructure<Credential>(pointer);if(item.CredentialBlobSize>2560)throw new AppFault("CREDENTIAL_UNAVAILABLE","已保存的凭据格式异常，请重新填写。",true);return Marshal.PtrToStringUni(item.CredentialBlob,(int)item.CredentialBlobSize/2);}finally{CredFree(pointer);}}
+ public void Save(string key){key=key.Trim();if(key.Length is <8 or >1024||key.Any(char.IsControl))throw new AppFault("INVALID_ARGUMENT","请输入有效的 API Key。");var bytes=Encoding.Unicode.GetBytes(key);var pointer=Marshal.AllocHGlobal(bytes.Length);try{Marshal.Copy(bytes,0,pointer,bytes.Length);var item=new Credential{Type=Generic,TargetName=Target,CredentialBlob=pointer,CredentialBlobSize=(uint)bytes.Length,Persist=LocalMachine,UserName="default"};if(!CredWrite(ref item,0))throw new AppFault("CREDENTIAL_UNAVAILABLE","API Key 未能保存到 Windows 凭据管理器。",true);}finally{for(var i=0;i<bytes.Length;i++)Marshal.WriteByte(pointer,i,0);Marshal.FreeHGlobal(pointer);Array.Clear(bytes);}}
+ public void Clear(){if(!CredDelete(Target,Generic,0)&&Marshal.GetLastWin32Error()!=1168)throw new AppFault("CREDENTIAL_UNAVAILABLE","API Key 未能清除，请重试。",true);}
+}

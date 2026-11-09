@@ -1,0 +1,16 @@
+Any Sidebar for Windows 0.1.0
+
+此为未代码签名的开发版，真实验证范围请查看 GitHub 文档。
+
+1. 选择与系统匹配的包：普通 Intel/AMD 电脑用 win-x64，ARM 电脑用 win-arm64。
+2. 完整解压，不要只复制 exe。可直接运行 AnySidebarWindows.exe。
+3. 如需安装到当前用户并建立开始菜单入口，可在 PowerShell 中运行包内 Install.ps1；不要求管理员权限，不修改系统脚本执行策略。系统不允许脚本时可使用直接运行方式。
+4. 如提示缺少 WebView2，从微软官方页面安装 Evergreen Runtime：https://developer.microsoft.com/microsoft-edge/webview2/。
+5. 在设置中填写自己的 DeepSeek API Key；开启划词/读屏前确认本机采集说明。
+
+快捷键：Ctrl+Alt+A 读屏/取消；Ctrl+Alt+S 展开/收起。可在设置中修改。
+右键桌面入口或托盘图标可打开设置、读屏、隐藏入口或退出。
+
+更新前从托盘正常退出，保留完整解压目录或重新运行安装脚本。Key 在 Windows 凭据管理器，会话位于 %LOCALAPPDATA%\AnySidebarForWindows，不随应用包替换清空。
+
+仓库：https://github.com/decous37/Any-Sidebar-for-Windows

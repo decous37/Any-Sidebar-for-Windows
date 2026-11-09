@@ -38,7 +38,7 @@ public sealed class ReadingRuntime:IAsyncDisposable {
  public Task SwitchTaskAsync(string id)=>Mutate(s=>{TaskFor(s,id);s.ActiveTaskId=id;routeEpoch++;});
  public Task RenameTaskAsync(string id,string title,int revision)=>Mutate(s=>{var t=TaskFor(s,id);Check(revision,t.Revision);t.Title=Title(title);t.Revision++;t.UpdatedAt=J.Now();});
  public Task ChangeDraftAsync(string id,int expected,JsonElement change)=>Mutate(s=>{
-  var d=DraftFor(s,id);Check(expected,d.Revision);var kind=change.GetProperty("kind").GetString();
+  var d=DraftFor(s,id);Check(expected,d.Revision);var kind=change.GetProperty("kind").GetString();var allowed=kind switch{"prompt"=>new[]{"kind","text"},"removeQuote" or "removeImage" or "clearAssistantQuote"=>["kind","id"],"assistantQuote"=>["kind","turnId","requestId","text"],_=>[]};if(allowed.Length==0||!change.EnumerateObject().Select(p=>p.Name).Order().SequenceEqual(allowed.Order()))throw new AppFault("INVALID_ARGUMENT","草稿字段无效。");
   switch(kind){
    case "prompt":var text=change.GetProperty("text").GetString()??"";if(Encoding.UTF8.GetByteCount(text)>2*1024*1024)throw new AppFault("INVALID_ARGUMENT","输入过长。");d.Prompt=text;d.PromptRevision++;break;
    case "removeQuote":d.ExternalQuotes.RemoveAll(q=>q.Id==change.GetProperty("id").GetString());break;
@@ -46,11 +46,16 @@ public sealed class ReadingRuntime:IAsyncDisposable {
    case "clearAssistantQuote":if(d.AssistantQuote?.Id==change.GetProperty("id").GetString())d.AssistantQuote=null;break;
    case "assistantQuote":
     var turnId=change.GetProperty("turnId").GetString()!;var requestId=change.GetProperty("requestId").GetString()!;var selected=change.GetProperty("text").GetString()??"";
-    if(!s.Turns.TryGetValue(turnId,out var turn)||turn.TaskId!=id||!s.Generations.TryGetValue(requestId,out var g)||g.TurnId!=turnId||g.TaskId!=id||string.IsNullOrWhiteSpace(selected)||!g.Answer.Contains(selected,StringComparison.Ordinal))throw new AppFault("QUOTE_SOURCE_MISMATCH","引用内容不属于此回答。");
+    if(!s.Turns.TryGetValue(turnId,out var turn)||turn.TaskId!=id||!s.Generations.TryGetValue(requestId,out var g)||g.TurnId!=turnId||g.TaskId!=id||string.IsNullOrWhiteSpace(selected)||!ContainsAnswer(g.Answer,selected))throw new AppFault("QUOTE_SOURCE_MISMATCH","引用内容不属于此回答。");
     d.AssistantQuote=new(){SourceTurnId=turnId,SourceRequestId=requestId,Text=selected};break;
    default:throw new AppFault("INVALID_ARGUMENT","无法识别的草稿修改。");
   }d.Revision++;d.UpdatedAt=J.Now();
  });
+ static bool ContainsAnswer(string answer,string selected){
+  if(answer.Contains(selected,StringComparison.Ordinal))return true;
+  static string Normalize(string value){value=System.Text.RegularExpressions.Regex.Replace(value,@"(?m)^\s{0,3}#{1,6}\s+","");value=System.Text.RegularExpressions.Regex.Replace(value,@"\[([^\]]+)\]\([^)]*\)","$1");value=System.Text.RegularExpressions.Regex.Replace(value,@"(?:\*\*|__|`{1,3}|~~)","");return System.Text.RegularExpressions.Regex.Replace(value,@"\s+"," ").Trim();}
+  var plain=Normalize(selected);return plain.Length>0&&Normalize(answer).Contains(plain,StringComparison.Ordinal);
+ }
  public Task RestoreSubmissionAsync(string taskId,string requestId,int expected)=>Mutate(s=>{var d=DraftFor(s,taskId);Check(expected,d.Revision);if(!s.Snapshots.TryGetValue(requestId,out var snap)||snap.TaskId!=taskId)throw new AppFault("REQUEST_MISSING","原问题不可用。");d.Prompt=snap.Submission.Prompt;d.PromptRevision++;d.Revision++;});
  public Task SavePreferencesAsync(int expected,JsonElement patch)=>Mutate(s=>{
   var p=s.Preferences;Check(expected,p.Revision);foreach(var property in patch.EnumerateObject()){

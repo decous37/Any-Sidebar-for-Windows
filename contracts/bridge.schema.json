@@ -184,6 +184,12 @@
     "hidePanel": {
       "required": {},
       "optional": {}
+    },
+    "readyToQuit": {
+      "required": {
+        "success": "boolean"
+      },
+      "optional": {}
     }
   }
 }

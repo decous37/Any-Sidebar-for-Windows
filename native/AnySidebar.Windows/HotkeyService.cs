@@ -1,0 +1,22 @@
+using System.Windows.Input;
+namespace AnySidebar.Windows;
+internal sealed class HotkeyService:IDisposable {
+ readonly IntPtr handle;readonly HwndSource source;readonly Dictionary<string,Shortcut?> bindings=new(){{"capture",null},{"panel",null}};bool suspended;
+ internal string CaptureState{get;private set;}="unbound";internal string PanelState{get;private set;}="unbound";
+ internal Action<string>? Triggered;internal Action? Changed;internal string? RecordingOperation{get;private set;}internal string RecordingKind{get;private set;}="capture";internal Shortcut? Candidate{get;private set;}
+ internal HotkeyService(Window window){handle=Win32.Handle(window);source=HwndSource.FromHwnd(handle);source.AddHook(Hook);}
+ static int Id(string kind)=>kind=="capture"?1:2;
+ static uint Modifiers(Shortcut b)=>b.Modifiers.Aggregate(Win32.MOD_NOREPEAT,(flags,m)=>flags|(m switch{"alt"=>1u,"control"=>2u,"shift"=>4u,"windows"=>8u,_=>0u}));
+ static bool Same(Shortcut? a,Shortcut? b)=>a is null?b is null:b is not null&&a.KeyCode==b.KeyCode&&a.Modifiers.Order().SequenceEqual(b.Modifiers.Order());
+ static void Validate(Shortcut b){if(b.KeyCode is <1 or >254||b.Modifiers.Count==0||b.Modifiers.Distinct().Count()!=b.Modifiers.Count||b.Modifiers.Any(x=>x is not("control" or "alt" or "shift" or "windows"))||!b.Modifiers.Any(x=>x is "control" or "alt" or "windows")||b.KeyCode is 0x10 or 0x11 or 0x12 or 0x1b or 0x5b or 0x5c)throw new AppFault("INVALID_SHORTCUT","请选择带 Ctrl、Alt 或 Win 的快捷键组合。");}
+ void SetState(string kind,string state){if(kind=="capture")CaptureState=state;else PanelState=state;Changed?.Invoke();}
+ bool Register(string kind,Shortcut? value){if(value is null){SetState(kind,"unbound");return true;}Validate(value);if(!Win32.RegisterHotKey(handle,Id(kind),Modifiers(value),(uint)value.KeyCode)){SetState(kind,"conflict");return false;}SetState(kind,"registered");return true;}
+ internal void Restore(Preferences p){bindings["capture"]=p.CaptureShortcut;bindings["panel"]=p.PanelShortcut;foreach(var kind in bindings.Keys)Register(kind,bindings[kind]);}
+ internal async Task ReplaceAsync(string kind,Shortcut? value,Func<Task> save){if(kind is not("capture" or "panel"))throw new AppFault("INVALID_ARGUMENT","无效快捷键类型。");if(value is not null)Validate(value);if(Same(value,bindings[kind])){await save();Candidate=null;Changed?.Invoke();return;}if(value is not null&&Same(value,bindings[kind=="capture"?"panel":"capture"]))throw new AppFault("SHORTCUT_CONFLICT","两项功能不能使用同一快捷键。");var old=bindings[kind];Win32.UnregisterHotKey(handle,Id(kind));if(!Register(kind,value)){Register(kind,old);throw new AppFault("SHORTCUT_CONFLICT","快捷键被系统或其他应用占用，原绑定已保留。");}try{await save();bindings[kind]=value;Candidate=null;Changed?.Invoke();}catch{Win32.UnregisterHotKey(handle,Id(kind));Register(kind,old);throw;}}
+ internal void StartRecording(string kind,string operationId){CancelRecording();Suspended(true);RecordingKind=kind;RecordingOperation=operationId;Candidate=null;Changed?.Invoke();}
+ internal void CancelRecording(){if(RecordingOperation is null)return;RecordingOperation=null;Candidate=null;Suspended(false);Changed?.Invoke();}
+ void Suspended(bool value){suspended=value;foreach(var kind in bindings.Keys){Win32.UnregisterHotKey(handle,Id(kind));if(!value)Register(kind,bindings[kind]);}}
+ internal bool RecordKey(int code){if(RecordingOperation is null)return false;if(code==0x1b){CancelRecording();return true;}if(code is 0x10 or 0x11 or 0x12 or 0x5b or 0x5c)return true;var modifiers=new List<string>();foreach(var(vk,name)in new[]{(0x11,"control"),(0x12,"alt"),(0x10,"shift"),(0x5b,"windows")})if((Win32.GetKeyState(vk)&0x8000)!=0||(name=="windows"&&(Win32.GetKeyState(0x5c)&0x8000)!=0))modifiers.Add(name);var binding=new Shortcut{KeyCode=code,Modifiers=modifiers};try{Validate(binding);Candidate=binding;RecordingOperation=null;Suspended(false);Changed?.Invoke();}catch(AppFault){/* Keep recording until a valid modified key or Esc. */}return true;}
+ IntPtr Hook(IntPtr hwnd,int message,IntPtr wparam,IntPtr lparam,ref bool handled){if(message==Win32.WM_HOTKEY&&!suspended){var id=wparam.ToInt32();if(id is 1 or 2){handled=true;Triggered?.Invoke(id==1?"capture":"panel");}}return IntPtr.Zero;}
+ public void Dispose(){foreach(var kind in bindings.Keys)Win32.UnregisterHotKey(handle,Id(kind));source.RemoveHook(Hook);}
+}

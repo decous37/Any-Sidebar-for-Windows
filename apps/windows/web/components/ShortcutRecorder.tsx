@@ -1,7 +1,7 @@
 import {useState} from 'react';
 import type {Bootstrap,Shortcut} from '../protocol';
-const keyNames:Record<number,string>={0:'A',1:'S',2:'D',3:'F',4:'H',5:'G',6:'Z',7:'X',8:'C',9:'V',11:'B',12:'Q',13:'W',14:'E',15:'R',16:'Y',17:'T',18:'1',19:'2',20:'3',21:'4',23:'5',22:'6',26:'7',28:'8',25:'9',29:'0',31:'O',32:'U',34:'I',35:'P',37:'L',38:'J',40:'K',45:'N',46:'M',49:'Space',36:'Return'};
-export function shortcutLabel(binding?:Shortcut|null){return binding?[...binding.modifiers.map(m=>({command:'⌘',option:'⌥',control:'⌃',shift:'⇧'}[m])),keyNames[binding.keyCode]??`键 ${binding.keyCode}`].join(' '):'未设置';}
+const keyNames:Record<number,string>={32:'Space',13:'Enter',9:'Tab',8:'Backspace',46:'Delete',36:'Home',35:'End',33:'PageUp',34:'PageDown',37:'←',38:'↑',39:'→',40:'↓'};
+export function shortcutLabel(binding?:Shortcut|null){if(!binding)return '未设置';const key=(binding.keyCode>=48&&binding.keyCode<=90)?String.fromCharCode(binding.keyCode):(binding.keyCode>=112&&binding.keyCode<=135)?`F${binding.keyCode-111}`:keyNames[binding.keyCode]??`键 ${binding.keyCode}`;return [...binding.modifiers.map(m=>({control:'Ctrl',alt:'Alt',shift:'Shift',windows:'Win'}[m])),key].join('+');}
 export default function ShortcutRecorder({data,kind,onRecord,onCancel,onSave,onClear}:{data:Bootstrap;kind:'capture'|'panel';onRecord:()=>Promise<void>;onCancel:()=>void;onSave:()=>void;onClear:()=>void}){
  const [starting,setStarting]=useState(false),binding=kind==='panel'?data.runtime.preferences.panelShortcut:data.runtime.preferences.captureShortcut,state=kind==='panel'?data.panelShortcutState:data.shortcutState;
  const matching=(data.recordingKind??'capture')===kind,recording=matching&&!!data.recordingOperationId,candidate=matching?data.recordedShortcut:null;

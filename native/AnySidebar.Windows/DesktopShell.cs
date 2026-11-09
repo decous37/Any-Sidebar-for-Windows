@@ -1,0 +1,32 @@
+using System.Windows.Input;
+using System.Windows.Shapes;
+using Microsoft.Web.WebView2.Wpf;
+using Drawing=System.Drawing;
+using Forms=System.Windows.Forms;
+namespace AnySidebar.Windows;
+internal sealed class DesktopShell:IDisposable {
+ internal readonly Window Panel;internal readonly Window Companion;internal readonly WebView2 Web;readonly Forms.NotifyIcon tray;readonly Action<string> action;bool quitting;System.Windows.Point? dragOrigin;System.Windows.Point? panelOrigin;bool dragged;readonly string layoutPath;
+ internal DesktopShell(string directory,Action<string> action){
+  this.action=action;layoutPath=System.IO.Path.Combine(directory,"layout.json");
+  Web=new WebView2{DefaultBackgroundColor=Drawing.Color.FromArgb(248,252,255)};
+  Panel=new Window{Title="Any Sidebar",Width=380,Height=640,MinWidth=320,MinHeight=420,WindowStyle=WindowStyle.SingleBorderWindow,ResizeMode=ResizeMode.CanResizeWithGrip,Topmost=true,ShowInTaskbar=false,Background=new SolidColorBrush(Color.FromRgb(250,253,255)),Content=Web};
+  Panel.Closing+=(_,e)=>{if(!quitting){e.Cancel=true;Panel.Hide();}};
+  Companion=new Window{Title="Any Sidebar 入口",Width=56,Height=56,WindowStyle=WindowStyle.None,ResizeMode=ResizeMode.NoResize,AllowsTransparency=true,Background=Brushes.Transparent,Topmost=true,ShowInTaskbar=false,ShowActivated=false};
+  var border=new Border{Background=new SolidColorBrush(Color.FromArgb(245,240,248,255)),BorderBrush=new SolidColorBrush(Color.FromRgb(184,216,249)),BorderThickness=new Thickness(1),CornerRadius=new CornerRadius(18),Margin=new Thickness(3),Cursor=Cursors.Hand};
+  var icon=new Grid{Width=28,Height=25};icon.Children.Add(new Rectangle{RadiusX=6,RadiusY=6,Stroke=new SolidColorBrush(Color.FromRgb(38,112,196)),StrokeThickness=2});icon.Children.Add(new Line{X1=17,X2=17,Y1=1,Y2=24,Stroke=new SolidColorBrush(Color.FromRgb(38,112,196)),StrokeThickness=2});icon.Children.Add(new Line{X1=5,X2=12,Y1=8,Y2=8,Stroke=new SolidColorBrush(Color.FromRgb(38,112,196)),StrokeThickness=2});icon.Children.Add(new Line{X1=5,X2=11,Y1=15,Y2=15,Stroke=new SolidColorBrush(Color.FromRgb(38,112,196)),StrokeThickness=2});border.Child=icon;Companion.Content=border;System.Windows.Automation.AutomationProperties.SetName(border,"Any Sidebar 入口");border.ToolTip="点击展开或收起；右键打开菜单";
+  border.MouseLeftButtonDown+=(_,e)=>{dragOrigin=e.GetPosition(null);panelOrigin=new(Companion.Left,Companion.Top);dragged=false;border.CaptureMouse();e.Handled=true;};
+  border.MouseMove+=(_,e)=>{if(dragOrigin is not {} start||panelOrigin is not {} origin||e.LeftButton!=MouseButtonState.Pressed)return;var p=e.GetPosition(null);var delta=p-start;if(delta.Length>4)dragged=true;if(dragged){Companion.Left=origin.X+delta.X;Companion.Top=origin.Y+delta.Y;}};
+  border.MouseLeftButtonUp+=(_,e)=>{border.ReleaseMouseCapture();if(dragOrigin is not null&&!dragged)action("toggle");dragOrigin=null;panelOrigin=null;SaveLayout();e.Handled=true;};
+  Companion.ContextMenu=new ContextMenu();Companion.ContextMenuOpening+=(_,_)=>{Companion.ContextMenu.Items.Clear();foreach(var(title,command)in MenuItems()){var item=new MenuItem{Header=title};item.Click+=(_,_)=>action(command);Companion.ContextMenu.Items.Add(item);}};
+  var iconPath=System.IO.Path.Combine(AppContext.BaseDirectory,"Resources","icon.ico");tray=new Forms.NotifyIcon{Text="Any Sidebar",Visible=true,Icon=File.Exists(iconPath)?new Drawing.Icon(iconPath):Drawing.SystemIcons.Application,ContextMenuStrip=new Forms.ContextMenuStrip()};tray.DoubleClick+=(_,_)=>action("toggle");tray.ContextMenuStrip.Opening+=(_,_)=>{tray.ContextMenuStrip.Items.Clear();foreach(var(title,command)in MenuItems())tray.ContextMenuStrip.Items.Add(title,null,(_,_)=>action(command));};
+  var area=SystemParameters.WorkArea;Companion.Left=area.Right-90;Companion.Top=area.Bottom-160;try{if(File.Exists(layoutPath)){using var doc=JsonDocument.Parse(File.ReadAllText(layoutPath));Companion.Left=doc.RootElement.GetProperty("x").GetDouble();Companion.Top=doc.RootElement.GetProperty("y").GetDouble();}}catch{/* A missing or obsolete layout does not affect reading records. */}ClampCompanion();Companion.SourceInitialized+=(_,_)=>Win32.Exclude(Companion);Panel.SourceInitialized+=(_,_)=>Win32.Exclude(Panel);Panel.SizeChanged+=(_,_)=>SaveLayout();
+ }
+ IEnumerable<(string Title,string Command)> MenuItems(){yield return(Panel.IsVisible?"收起对话":"展开对话","toggle");yield return("框选读屏","capture");yield return("窗口读屏","capture-window");yield return("设置…","settings");yield return(Companion.IsVisible?"隐藏入口":"显示入口","companion");yield return("退出 Any Sidebar","quit");}
+ internal void ShowPanel(){var screen=Forms.Screen.FromHandle(Win32.Handle(Companion));var rect=screen.WorkingArea;var dpi=VisualTreeHelper.GetDpi(Companion);var area=new Rect(rect.X/dpi.DpiScaleX,rect.Y/dpi.DpiScaleY,rect.Width/dpi.DpiScaleX,rect.Height/dpi.DpiScaleY);var x=Companion.Left-Panel.Width-12;if(x<area.Left)x=Companion.Left+Companion.Width+12;Panel.Left=Math.Clamp(x,area.Left,Math.Max(area.Left,area.Right-Panel.Width));Panel.Top=Math.Clamp(Companion.Top+Companion.Height-Panel.Height,area.Top,Math.Max(area.Top,area.Bottom-Panel.Height));Panel.Show();Panel.Activate();}
+ internal void Toggle(){if(Panel.IsVisible)Panel.Hide();else ShowPanel();}
+ internal void SetCompanion(bool visible){if(visible){ClampCompanion();Companion.Show();}else Companion.Hide();}
+ internal void Reference(bool has){if(Companion.Content is Border b)b.BorderBrush=has?new SolidColorBrush(Color.FromRgb(38,125,220)):new SolidColorBrush(Color.FromRgb(184,216,249));}
+ void ClampCompanion(){var screens=Forms.Screen.AllScreens;var virtualArea=SystemParameters.VirtualScreenWidth;var rect=new Rect(Companion.Left,Companion.Top,56,56);if(!screens.Any(s=>new Rect(s.WorkingArea.X,s.WorkingArea.Y,s.WorkingArea.Width,s.WorkingArea.Height).IntersectsWith(rect))){Companion.Left=SystemParameters.WorkArea.Right-90;Companion.Top=SystemParameters.WorkArea.Bottom-160;}_=virtualArea;}
+ void SaveLayout(){try{Directory.CreateDirectory(System.IO.Path.GetDirectoryName(layoutPath)!);var temporary=layoutPath+".tmp";File.WriteAllText(temporary,JsonSerializer.Serialize(new{x=Companion.Left,y=Companion.Top,width=Panel.Width,height=Panel.Height}));File.Move(temporary,layoutPath,true);}catch{/* Window placement is separate from conversation durability. */}}
+ public void Dispose(){quitting=true;SaveLayout();tray.Visible=false;tray.Dispose();Web.Dispose();Panel.Close();Companion.Close();}
+}

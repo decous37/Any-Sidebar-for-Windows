@@ -29,7 +29,7 @@ export function validRequest(value:unknown):value is Request{
  return Object.entries(args).every(([k,v])=>{const type=rule.required[k]??rule.optional[k];if(!type)return false;if(type==='id')return isID(v);if(type==='string')return typeof v==='string'&&new TextEncoder().encode(v).length<=2*1024*1024;if(type==='integer')return integer(v);if(type==='boolean')return typeof v==='boolean';if(type==='object')return object(v);return typeof v==='string'&&type.split('|').includes(v);});
 }
 function required(value:unknown,condition:boolean):asserts condition{if(!condition)throw Error('本机数据格式异常，请重新打开面板。');}
-function validateImage(value:unknown){required(value,object(value));required(value,isID(value.id)&&integer(value.width)&&integer(value.height)&&integer(value.byteLength));for(const k of ['thumbnailURL','previewURL'])required(value,typeof value[k]==='string'&&new RegExp('^https://anysidebar.local/asset/'+value.id+'/(thumbnail|preview)$').test(String(value[k])));}
+function validateImage(value:unknown){required(value,object(value));required(value,isID(value.id)&&integer(value.width)&&integer(value.height)&&integer(value.byteLength));for(const k of ['thumbnailURL','previewURL'])required(value,typeof value[k]==='string'&&new RegExp('^https://anysidebar\\.local/asset/'+value.id+'/(thumbnail|preview)$').test(String(value[k])));}
 function noPrivateFields(value:unknown){if(Array.isArray(value))value.forEach(noPrivateFields);else if(object(value)){for(const [key,v] of Object.entries(value)){if(['documentIdentity','storageKey','thumbnailKey','key','apiKey','base64','sourceLeaseId'].includes(key))throw Error('本机视图包含不可显示的字段。');noPrivateFields(v);}}}
 export function decodeBootstrap(value:unknown):Bootstrap{
  noPrivateFields(value);required(value,object(value)&&object(value.runtime)&&object(value.permissions)&&object(value.credential));
@@ -40,4 +40,4 @@ export function decodeBootstrap(value:unknown):Bootstrap{
  const credential=value.credential;required(credential,object(credential)&&(credential.state==='known'?typeof credential.configured==='boolean':credential.state==='unknown'&&object(credential.error)));
  return value as unknown as Bootstrap;
 }
-declare global {interface Window{webkit?:{messageHandlers:{native:{postMessage:(request:Request)=>Promise<Envelope>}}}}}
+declare global {interface Window{chrome?:{webview:{postMessage:(request:Request)=>void;addEventListener:(name:'message',listener:(event:MessageEvent)=>void)=>void;removeEventListener:(name:'message',listener:(event:MessageEvent)=>void)=>void}}}}

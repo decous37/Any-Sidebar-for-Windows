@@ -1,0 +1,5 @@
+import {chromium} from 'playwright';
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
+await mkdir('build',{recursive:true});const svg=await readFile('contracts/icon-source.svg','utf8');const browser=await chromium.launch({headless:true});
+try{const page=await browser.newPage({deviceScaleFactor:1});const frames=[];for(const size of [16,32,48,128,256]){await page.setViewportSize({width:size,height:size});await page.setContent('<style>html,body{margin:0;background:transparent}svg{width:100vw;height:100vh;display:block}</style>'+svg);frames.push({size,data:await page.screenshot({omitBackground:true})});}
+const header=Buffer.alloc(6+frames.length*16);header.writeUInt16LE(1,2);header.writeUInt16LE(frames.length,4);let offset=header.length;frames.forEach(({size,data},index)=>{const at=6+index*16;header[at]=size===256?0:size;header[at+1]=header[at];header.writeUInt16LE(1,at+4);header.writeUInt16LE(32,at+6);header.writeUInt32LE(data.length,at+8);header.writeUInt32LE(offset,at+12);offset+=data.length;});await writeFile('build/icon.ico',Buffer.concat([header,...frames.map(x=>x.data)]));}finally{await browser.close();}
