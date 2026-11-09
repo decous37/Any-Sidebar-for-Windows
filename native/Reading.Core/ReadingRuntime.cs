@@ -88,7 +88,7 @@ public sealed class ReadingRuntime:IAsyncDisposable {
   if(next.Preferences.QuoteMode!="latest"||!selections.TryGetValue(e.TaskId,out old)||old.Lease!=e.Lease||old.Token!=e.Token||old.Quote!=e.ExpectedQuoteId)return null;
   var removed=d.ExternalQuotes.RemoveAll(q=>q.Id==old.Quote&&q.SelectionToken==e.Token&&q.SourceLeaseId==e.Lease);if(removed>0){d.Revision++;Commit(next);}selections.Remove(e.TaskId);return null;
  }finally{gate.Release();}}
- public async Task AttachAsync(string taskId,ImageAsset asset){try{await Mutate(s=>{var d=DraftFor(s,taskId);if(d.Images.Count>=Catalog.AppLimits.MaxNewImages)throw new AppFault("IMAGE_LIMIT","每次最多新增 9 张截图。");if(asset.ByteLength>Catalog.AppLimits.MaxImageBytes)throw new AppFault("IMAGE_LIMIT","单张截图最多 10 MiB。");s.Assets[asset.Id]=asset;d.Images.Add(new(){ImageId=asset.Id});d.Revision++;d.UpdatedAt=J.Now();});}catch{files.Delete(asset);throw;}}
+ public async Task AttachAsync(string taskId,ImageAsset asset,CancellationToken cancel=default){try{await Mutate(s=>{cancel.ThrowIfCancellationRequested();var d=DraftFor(s,taskId);if(d.Images.Count>=Catalog.AppLimits.MaxNewImages)throw new AppFault("IMAGE_LIMIT","每次最多新增 9 张截图。");if(asset.ByteLength>Catalog.AppLimits.MaxImageBytes)throw new AppFault("IMAGE_LIMIT","单张截图最多 10 MiB。");s.Assets[asset.Id]=asset;d.Images.Add(new(){ImageId=asset.Id});d.Revision++;d.UpdatedAt=J.Now();});}catch{files.Delete(asset);throw;}}
  public async Task<string> SendAsync(string taskId,int expectedDraft,int expectedPreferences,string operationId,string kind="send",string? sourceRequestId=null,string? turnId=null){
   Preparation prep;State frozen;CancellationTokenSource cts;
   await gate.WaitAsync();try{

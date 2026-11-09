@@ -16,7 +16,7 @@ internal sealed class CaptureService {
   if(clipped.Width<2||clipped.Height<2)throw new AppFault("CAPTURE_FAILED","截取范围太小或不在屏幕内。");if(clipped.Width>8192||clipped.Height>8192)throw new AppFault("IMAGE_LIMIT","截取范围超过 8192px，请缩小区域。");
   await Task.Delay(220,cancel);var source=target!=IntPtr.Zero&&!Win32.Own(target)?Win32.Source(target,mode=="region"?"screen-region":"screen-window"):new SourceInfo{Kind=mode=="region"?"screen-region":"screen-window"};
   var result=await Task.Run(()=>{
-   using var bitmap=new Drawing.Bitmap(clipped.Width,clipped.Height,Drawing.Imaging.PixelFormat.Format32bppArgb);using(var graphics=Drawing.Graphics.FromImage(bitmap))graphics.CopyFromScreen(clipped.Left,clipped.Top,0,0,clipped.Size,Drawing.CopyPixelOperation.SourceCopy);
+   using var bitmap=new Drawing.Bitmap(clipped.Width,clipped.Height,Drawing.Imaging.PixelFormat.Format32bppRgb);using(var graphics=Drawing.Graphics.FromImage(bitmap))graphics.CopyFromScreen(clipped.Left,clipped.Top,0,0,clipped.Size,Drawing.CopyPixelOperation.SourceCopy);
    cancel.ThrowIfCancellationRequested();using var bytes=new MemoryStream();bitmap.Save(bytes,Drawing.Imaging.ImageFormat.Png);var ratio=Math.Min(1,160d/Math.Max(bitmap.Width,bitmap.Height));using var thumb=new Drawing.Bitmap(bitmap,Math.Max(1,(int)(bitmap.Width*ratio)),Math.Max(1,(int)(bitmap.Height*ratio)));using var preview=new MemoryStream();thumb.Save(preview,Drawing.Imaging.ImageFormat.Png);return(Png:bytes.ToArray(),Thumbnail:preview.ToArray(),Source:source);
   },cancel);cancel.ThrowIfCancellationRequested();return result;
  }
