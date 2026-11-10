@@ -4,7 +4,11 @@
 
 沿用 [Mac 版](https://github.com/decous37/Any-Sidebar-for-Mac) 的界面：划选文字、手动截取代码或图表，把资料留在引用区，再直接问 AI。按阅读任务保存会话，不因切换文件换对话。
 
-当前是 **0.1.1 开发预览版**，提供 x64、ARM64 下载包。本次修复截图显示和记事本文档划词，已通过 Windows 针对性检查，详见[验证记录](docs/validation-0.1.1.md)。ARM64 实际运行、多屏缩放和真实模型效果仍待验证。
+当前是 **0.1.1 开发预览版**，提供 x64、ARM64 下载包。本次修复截图显示和记事本文档划词，已通过 Windows 针对性检查，详见[验证记录](docs/validation-0.1.1.md)。已在 Windows 11 ARM 虚拟机中核对划词、窗口截图与预览；多屏缩放和真实模型效果仍待验证。
+
+![在记事本中选择文字，自动加入侧栏引用](docs/images/windows11-arm-selection.png)
+
+Windows 11 ARM 实际运行截图，使用公开演示资料。[查看截图与预览界面](docs/screenshots.md)。
 
 ## 下载与开始
 
